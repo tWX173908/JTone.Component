@@ -18,8 +18,14 @@ namespace JTone.Com.ClosedXml.Test
         /// <summary>
         /// 成果检查验证信息
         /// </summary>
-        [Description("图审问题及验证率")]
-        public List<CheckStageResult> CheckStageResults { get; set; }
+        [Description("成果检查-图审问题及验证率")]
+        public List<CheckStageResult> CheckResultStageResults { get; set; }
+
+        /// <summary>
+        /// 成果检查验证信息
+        /// </summary>
+        [Description("中间检查-图审问题及验证率")]
+        public CheckStageResult CheckMiddleStageResult { get; set; }
 
         /// <summary>
         /// 任务-进行中

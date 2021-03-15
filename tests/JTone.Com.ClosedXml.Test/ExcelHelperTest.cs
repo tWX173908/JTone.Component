@@ -13,7 +13,7 @@ namespace JTone.Com.ClosedXml.Test
             var line = new List<DesignTaskGroupReportOutDto> { new DesignTaskGroupReportOutDto
             {
                 ProjectName = "CD-2013388",
-                CheckStageResults = new List<CheckStageResult>
+                CheckResultStageResults = new List<CheckStageResult>
                 {
                     new CheckStageResult
                     {

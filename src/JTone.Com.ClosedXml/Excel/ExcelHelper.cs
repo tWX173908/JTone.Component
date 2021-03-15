@@ -10,18 +10,30 @@ using JTone.Core;
 
 namespace JTone.Com.ClosedXml.Excel
 {
+    /// <summary>
+    /// EXCEL帮助类
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public class ExcelHelper<T>
     {
         private int _startRow = 1;
         private int _startCol = 1;
 
+        //sheet名
         private readonly string _sheetName;
+
+        //数据
         private readonly List<T> _lines;
+
+        //标题
+        private List<List<string>> _titles;
+
 
         public ExcelHelper(string sheetName, List<T> lines)
         {
             _sheetName = sheetName;
             _lines = lines;
+            _titles = new List<List<string>>(lines.Count);
         }
 
         /// <summary>
@@ -31,6 +43,11 @@ namespace JTone.Com.ClosedXml.Excel
         /// <returns></returns>
         public MemoryStream Export()
         {
+            if (_sheetName.IsNullOrEmpty() || _lines?.Count == 0)
+            {
+                throw new ArgumentNullException($"{nameof(_sheetName)} or lines");
+            }
+
             using (var workbook = new XLWorkbook())
             {
                 var worksheet = workbook.Worksheets.Add(_sheetName);
@@ -50,51 +67,72 @@ namespace JTone.Com.ClosedXml.Excel
         /// 构建标题栏
         /// </summary>
         /// <remarks>
-        /// Display：标题行(内容来源于值)
-        /// Description：标题行（内容来源于标题）
+        /// Description：标题行（内容来源于字段标题）
+        /// Display：标题行(内容来源于字段值)
         /// </remarks>
         /// <param name="worksheet"></param>
         private void Aw_BuildHeaders(IXLWorksheet worksheet)
         {
-            var data = _lines.FirstOrDefault();
-            var props = typeof(T).GetTypeProperties();
-
-            foreach (var prop in props)
-            {
-                Aw_BuildTypeHeaders(worksheet, prop, data);
-
-                var description = prop.GetCustomAttribute<DescriptionAttribute>()?.Description;
-                if (description.IsNotNullOrEmpty())
-                {
-                    worksheet.Cell(_startRow, _startCol++).Value = description;
-                    continue;
-                }
-
-                //DisplayName
-                var displayName = prop.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
-
-
-            }
+            Aw_BuildTypeHeaders(typeof(T));
         }
 
 
         /// <summary>
         /// 构建类型表头信息
         /// </summary>
-        /// <param name="worksheet"></param>
-        /// <param name="prop"></param>
-        /// <param name="data"></param>
-        private static void Aw_BuildTypeHeaders(IXLWorksheet worksheet, PropertyInfo prop, T data)
+        /// <param name="type"></param>
+        private List<string> Aw_BuildTypeHeaders(Type type)
         {
-            var type = prop.PropertyType.ToString();
-            if (type.StartsWith("System.Collections.Generic.List")) 
-            {
+            var props = type.GetTypeProperties();
 
-            }
-            else
+            var currentTitles = new List<string>();
+            foreach (var prop in props)
             {
-                
+                var typeDesc = prop.PropertyType.ToString();
+                if (prop.PropertyType.IsSimpleType())
+                {
+                    currentTitles.Add(Aw_BuildTitleHeader(prop));
+                }
+                else if(typeDesc.StartsWith("System.Collections.Generic.List"))
+                {
+                    Aw_BuildTypeHeaders(prop.PropertyType);
+                }
+                else
+                {
+                    Aw_BuildTypeHeaders(prop.PropertyType);
+                }
             }
+
+            return currentTitles;
+        }
+
+
+        /// <summary>
+        /// 构建标题单元格内容
+        /// </summary>
+        /// <param name="prop"></param>
+        /// <returns></returns>
+        private string Aw_BuildTitleHeader(PropertyInfo prop)
+        {
+            var description = prop.GetCustomAttribute<DescriptionAttribute>()?.Description;
+            if (description.IsNotNullOrEmpty())
+            {
+                return description;
+            }
+
+            //DisplayName
+            var displayName = prop.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
+            if (displayName.IsNullOrEmpty())
+            {
+                return string.Empty;
+            }
+
+            if (prop.PropertyType.IsEnum)
+            {
+                return (prop.GetValue(_lines.FirstOrDefault()) as Enum).Desc();
+            }
+
+            return prop.GetValue(_lines.FirstOrDefault()).ToString();
         }
 
 
